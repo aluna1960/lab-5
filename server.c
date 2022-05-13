@@ -1,10 +1,15 @@
 #include "helpers.h"
 #include <pthread.h>
-
+#include <semaphore.h>
 #define PORT 6969
+
+
 
 void *clientHandler(void *cSocket);
 int startListen(int port);
+pthread_t tid[10];
+int* temp;
+sem_t sem;
 
 /**
  * Handle client request.
@@ -67,31 +72,54 @@ int startListen(int port){
     
     // Your code here
     sSocket = socket(AF_INET, SOCK_STREAM, 0);
-    bind(sSocket, (struct sockaddr *)&sAddr, sizeof(struct sockaddr));
-    listen(sSocket, 20);
-    return sSocket;
-    
+    bind(sSocket, (struct sockaddr *)&sAddr, sizeof(sAddr));
+    listen(sSocket, 100);
+    return sSocket;  
 }
 
+int qHandler(struct queue *q){
+
+  while(1){
+    sem_wait(&sem);
+    temp = deQueue(q);
+    sem_post(&sem);
+    
+    if(temp != NULL){
+      clientHandler((void *)temp);
+      free(temp);
+    }
+  }
+}
+  
+
 int main(int argc, char**argv){
-    pthread_t tid;
+    
+    int cSock;
+    int cSize;
+    struct sockaddr_in cAddr;
+    int *sock;
+    struct queue* queue = createQueue();
+    sem_init(&sem, 0 ,1);
+    
     printf("Opening socket\n");
     int sSocket = startListen(PORT);
     assert(sSocket>-1);
-    struct sockaddr_in sAddr;
-    
-    bzero(&sAddr, sizeof(sAddr));
-    sAddr.sin_family      = AF_INET;
-    sAddr.sin_port        = htons(PORT);
-    sAddr.sin_addr.s_addr = INADDR_ANY;
 
-    int size = sizeof(sAddr);
-
-    int cSocket = accept(sSocket, (struct sockaddr *)&sAddr, &size);
-    pthread_create(&tid, NULL, clientHandler, &cSocket);
-      //clientHandler(&cSocket);
-    pthread_join(tid,NULL);
+    int i;
+    for(i = 0; i < 10; i++){
+      pthread_create(&tid[i], NULL, qHandler, q);
+    }
     
+    
+    while(1){
+      cSize = sizeof(cAddr);
+      cSocket = accept(sSocket, (struct sockaddr *)&cAddr, &cSize);
+      
+      
+      sock = malloc(1);
+      *sock = cSock;
+      
+      enQueue(queue, sock);
+    }
     return 0;    
-
 }
