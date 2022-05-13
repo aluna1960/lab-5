@@ -107,13 +107,13 @@ int main(int argc, char**argv){
 
     int i;
     for(i = 0; i < 10; i++){
-      pthread_create(&tid[i], NULL, qHandler, q);
+      pthread_create(&tid[i], NULL, qHandler, queue);
     }
     
     
     while(1){
       cSize = sizeof(cAddr);
-      cSocket = accept(sSocket, (struct sockaddr *)&cAddr, &cSize);
+      cSock = accept(sSocket, (struct sockaddr *)&cAddr, &cSize);
       
       
       sock = malloc(1);
